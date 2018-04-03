@@ -11,8 +11,40 @@ def huffman(pList):
     plist: ((0.50,'A'),(0.25,'B'),(0.125,'C'),(0.125,'D'))
     returns: {'A': [0], 'B': [1, 0], 'C': [1, 1, 0], 'D': [1, 1, 1]} 
     """
-    # Your Code Here
-    pass
+    sorted_pList = sorted(pList, key=lambda p: p[0], reverse=True)
+    codebook = {}
+    prefix = []
+    # if input is empty
+    if len(sorted_pList) == 0:
+        return code_book
+    while len(sorted_pList) > 1:
+        probA, symbolA = sorted_pList.pop()
+        probB, symbolB = sorted_pList.pop()
+        inserted = False
+        for i in xrange(len(sorted_pList) - 1, -1, -1):
+            prob, _ = sorted_pList[i]
+            if prob > probA + probB:
+                sorted_pList.insert(i + 1, (probA + probB, (symbolA, symbolB)))
+                inserted = True
+                break
+        if not inserted:
+            sorted_pList.insert(0, (probA + probB, (symbolA, symbolB)))
+    codebook = tree_to_codebook(sorted_pList[0][1], codebook, [])
+    # special case, if len(pList) == 1
+    return codebook
+
+def tree_to_codebook(tree, codebook, prefix):
+    left, right = tree
+    if type(left) == tuple:
+        codebook = tree_to_codebook(left, codebook, prefix + [0])
+    else:
+        codebook[left] = prefix + [0]
+    if type(right) == tuple:
+        codebook = tree_to_codebook(right, codebook, prefix + [1])
+    else:
+        codebook[right] = prefix + [1]
+    return codebook
+    
 
 if __name__ == '__main__':
     # test case 1: four symbols with equal probability
