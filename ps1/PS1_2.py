@@ -1,6 +1,7 @@
 # template file for 6.02 PS1, Python Task 2
 import numpy,random
 import PS1_tests
+import pprint
 from PS1_1 import huffman
 
 # arguments:
@@ -16,8 +17,38 @@ def decode(encoding_dict,encoded_message):
     encoded_msg: [1, 1, 0, 1, 0, 0, 1, 0, 1]
     returns 'ABCD'
     """
-    # Your code here
-    pass
+    msg = []
+    tree = to_tree(encoding_dict)
+    pprint.pprint(tree)
+    pointer = tree
+    for code in encoded_message:
+        if pointer[code] is not None:
+            pointer = pointer[code]
+        else:
+            msg.append(pointer['symbol'])
+            pointer = tree[code]
+    if pointer['symbol'] is not None:
+        msg.append(pointer['symbol'])
+    return msg
+
+def to_tree(encoding_dict):
+    left_dict = {}
+    right_dict = {}
+    symbol = None
+    for key, val in encoding_dict.items():
+        if len(val) == 0:
+            symbol = key  
+            continue
+        if val[0] == 0:
+            left_dict[key] = val[1:]
+        else:
+            right_dict[key] = val[1:]
+    return {
+        0: to_tree(left_dict) if left_dict else None,
+        1: to_tree(right_dict) if right_dict else None,
+        'symbol': symbol,
+    }
+
 
 
 if __name__ == '__main__':
