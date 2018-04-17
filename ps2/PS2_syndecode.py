@@ -22,7 +22,22 @@ def equal(a, b):
 # corresponding to the k decoded *message* bits.  We return codeword[:k] 
 # in the template; you can preserve that, or change it as you wish.
 def syndrome_decode(codeword, n, k, G):
-    ## YOUR CODE HERE
+    syndromes = []
+    H = concatenate((G[:, k:].transpose(), identity(n - k)), axis=1)
+    n = H.shape[1]
+    for i in xrange(k):
+        v = zeros((n, 1))
+        v[i, 0] = 1
+        syndromes.append(((matmul(H, v) % 2).reshape(1, H.shape[0]), i))
+    c = (matmul(H, matrix(codeword).reshape(len(codeword), 1)) % 2).reshape(1, H.shape[0])
+    if (c == 0).all():
+        return codeword[:k]
+    for syndrome, index in syndromes:
+        if (syndrome == c).all():
+            codeword_cp = codeword[:]
+            codeword_cp[index] = 0 if codeword_cp[index] == 1 else 1
+            return codeword_cp[:k]
+        
     return codeword[:k]
 
 if __name__ == '__main__':
