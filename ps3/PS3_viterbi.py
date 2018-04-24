@@ -50,8 +50,7 @@ class ViterbiDecoder:
     # branch metric.  Consider using PS3_tests.hamming(seq1,seq2) which
     # computes the Hamming distance between two binary sequences.
     def branch_metric(self,expected,received):
-        #your code here
-        pass
+        return ((expected + received) % 2).sum()
 
     # Compute self.PM[...,n] from the batch of r parity bits and the
     # path metrics for self.PM[...,n-1] computed on the previous
@@ -64,8 +63,22 @@ class ViterbiDecoder:
     # and self.branch_metric().  To see what these mean, scan through the
     # code above.
     def viterbi_step(self,n,received_voltages):
+        for state in xrange(self.nstates):
+            min_pm = 1000000
+            min_pre_state = -1
+            for pre_state in self.predecessor_states[state]:
+                parity = self.expected_parity[pre_state][state]
+                distance = self.branch_metric(parity, received_voltages)
+                pm = self.PM[pre_state, n - 1] + distance
+                if pm < min_pm:
+                    min_pm = pm
+                    min_pre_state = pre_state
+            self.Predecessor[state, n] = min_pre_state
+            self.PM[state, n] = min_pm
         #your code here
-        pass
+        #print n, received_voltages
+        #print self.expected_parity[0][2]
+        #print self.predecessor_states
 
     # Identify the most-likely ending state of the encoder by
     # finding the state s that has the minimum value of PM[s,n]
@@ -73,8 +86,8 @@ class ViterbiDecoder:
     # are several states with the same minimum value, choose one
     # arbitrarily.  Return the state s.
     def most_likely_state(self,n):
-        #your code here
-        pass
+        return numpy.argmin(self.PM[:, n], axis=0)
+        
 
     # Starting at state s at time n, use the Predecessor
     # array to find all the states on the most-likely
@@ -82,8 +95,14 @@ class ViterbiDecoder:
     # the trellis).  Each state contributes a message bit.
     # Return the decoded message as a sequence of 0's and 1's.
     def traceback(self,s,n):
-        #your code here
-        pass
+        msg = []
+        state = s
+        while n >= 1:
+            msg.append(state >> (self.K - 2))
+            pre_state = self.Predecessor[state, n]
+            state = pre_state
+            n -= 1
+        return list(reversed(msg))
 
     # Figure out what the transmitter sent from info in the
     # received voltages.

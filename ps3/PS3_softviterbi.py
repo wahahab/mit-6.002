@@ -10,8 +10,8 @@ class SoftViterbiDecoder(ViterbiDecoder):
     # the square of the Euclidian distance between the 
     # expected and received voltages.
     def branch_metric(self,expected,received):
-        #your code here
-        pass
+        dist = numpy.linalg.norm(expected - received) ** 2
+        return dist
 
 if __name__=='__main__':
     # Test whether branch metrics are as expected
