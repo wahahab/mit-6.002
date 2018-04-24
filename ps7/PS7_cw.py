@@ -17,26 +17,32 @@ class WinCSMANode(WirelessNode):
         # for plots of collisions/success
         self.sent = []
         self.coll = []
+        self.cw = self.network.cwmin
+        self.send_in = None
 
     def channel_access(self,time,ptime,numnodes):
         # You can tell if the channel is busy or not using
         # the self.network.channel_busy() function call.
-        ## Your code here
-        pass
+        if self.send_in is None:
+            self.send_in = random.randint(1, self.cw)
+        elif not self.network.channel_busy():
+            self.send_in -= 1
+        if self.send_in < 0 and not self.network.channel_busy():
+            self.send_in = None
+            return True
+        return False
 
     def on_collision(self,packet):
         # for plots of collisions
         self.coll.append(self.network.time)
 
-        ## Your code here
-        pass
+        self.cw = min(self.cw * 2, self.network.cwmax)
 
     def on_xmit_success(self,packet):
         # for plots of successful transmissions
         self.sent.append(self.network.time)
 
-        ## Your code here
-        pass
+        self.cw = max(self.cw / 2, self.network.cwmin)
 
 ################################################################
 
