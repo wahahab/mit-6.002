@@ -10,18 +10,17 @@ import matplotlib.pyplot as p
 class TDMANode(WirelessNode):
     def __init__(self,location,network,retry):
         WirelessNode.__init__(self,location,network,retry)
-        # any additional state or variables may be set here
 
     def channel_access(self,time,ptime,numnodes):
-        ## Your code here
-        pass
+        my_turn = int((time % (numnodes * (ptime))) / (ptime)) == self.get_id() \
+                and int((time % (numnodes * (ptime))) %
+                (ptime)) == 0
+        return my_turn
 
     def on_collision(self,packet):
-        ## Your code here
         pass
 
     def on_xmit_success(self,packet):
-        ## Your code here
         pass
 
 ################################################################
