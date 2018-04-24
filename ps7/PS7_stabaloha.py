@@ -21,22 +21,19 @@ class AlohaNode(WirelessNode):
         self.p = self.network.pmax
 
     def channel_access(self,time,ptime,numnodes):
-        ## Your code here
-        pass
+        return self.p > random.random()
 
     def on_collision(self,packet):
         # for plots of collisions
         self.coll.append(self.network.time)
 
-        ## Your code here
-        pass
+        self.p = max(self.network.pmin, self.p / 2)
 
     def on_xmit_success(self,packet):
         # for plots of successful transmissions
         self.sent.append(self.network.time)
 
-        ## Your code here
-        pass
+        self.p = min(self.network.pmax, self.p * 2)
 
 ################################################################
 
