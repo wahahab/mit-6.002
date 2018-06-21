@@ -16,8 +16,8 @@ class LSRouter(Router):
 
     def make_ls_advertisement(self):
         # return a list of all neighbors to send out in an LSA
-        ## Your code here
-        return
+        return [(link.end1 if link.end1 != self else link.end2,
+            pair[2]) for link, pair in self.neighbors.items()]
 
     def send_lsa(self, time):
         self.LSA_seqnum += 1
@@ -79,8 +79,35 @@ class LSRouter(Router):
     # in this function by processing the information in self.LSA.
     # "nodes" is the list of nodes we know about.
     def run_dijkstra(self, nodes):
-        ## Your code here
-        pass
+        source = nodes[0]
+        self.routes = {}
+        prev = {}
+        self.spcost = {source: 0}
+        costs = {source: 0}
+        while len(costs.keys()) > 0:
+            address, source_cost = min(costs.items(),
+                key=lambda (address, cost): cost)
+            del costs[address]
+            self.spcost[address] = source_cost
+            neighbors = self.LSA.get(address, None)
+            if neighbors is None:
+                continue
+            for neighbor, cost in neighbors[1:]:
+                dest = neighbor.address
+                total_cost = source_cost + cost
+                if dest not in self.spcost and (
+                    dest not in costs or
+                    total_cost < costs[dest]
+                ):
+                    costs[dest] = total_cost 
+                    prev[dest] = address
+        for dest in self.spcost.keys():
+            if dest == source:
+                continue
+            address = dest
+            while prev[address] != source:
+                address = prev[address]
+            self.routes[dest] = self.getlink(address)
 
     # Let's clear the current routing table and rebuild it.  The hard
     # work is done by run_dijkstra().
