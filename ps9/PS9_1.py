@@ -5,6 +5,9 @@ import random,sys
 from optparse import OptionParser
 from PS9_netsim import *
 
+ALPHA = 1.0 / 8.0
+BETA = 0.25
+
 # ReliableSenderNode extends Router to implement a reliable sender
 class ReliableSenderNode(Router):
     def __init__(self,location,qsize,address=None):
@@ -20,6 +23,8 @@ class ReliableSenderNode(Router):
         ## Your initialization code here.  We've already initialized
         ## self.srtt, self.rttdev, self.timeout above.  Initialize anything
         ## else you need here.
+        self.seqnum = 1
+        self.saved_packet = None
 
     def __repr__(self):
         return 'ReliableSenderNode<%s>' % str(self.address)
@@ -58,21 +63,31 @@ class ReliableSenderNode(Router):
     # 2. Call self.send_pkt() to send a packet specifying the arguments as 
     # in the send_pkt() template shown above.  This method returns the packet.
     def reliable_send(self, time):
-        ## Your code here
-        pass
+        if self.saved_packet is None:
+            self.saved_packet = self.send_pkt(time, self.seqnum, time, 'black')
+        elif time >= self.saved_packet.properties['timestamp'] + self.timeout:
+            self.saved_packet = self.send_pkt(time, self.saved_packet.properties['seqnum'],
+                    time, 'grey')
+            self.timeout *= 2
 
     # An ACK just arrived; process it.  Remember to call calc_timeout with the
     # appropriate information.
     def process_ack(self, time, acknum, timestamp):
-        ## Your code here
-        pass
+        if acknum == self.seqnum:
+            self.seqnum += 1
+            self.saved_packet = None
+            self.timeout = self.calc_timeout(time, timestamp)
 
     # Update RTT statistics and compute the sender's timeout value.  The 
     # current time and the timestamp echoed in the ACK from the receiver 
     # are arguments to this function.
     def calc_timeout(self, time, pkt_timestamp):
-        ## Your code here
-        pass
+        assert time > pkt_timestamp
+        r = time - pkt_timestamp
+        self.srtt = ALPHA * r + (1 - ALPHA) * self.srtt
+        dev = abs(r - self.srtt)
+        self.rttdev = BETA * dev + (1 - BETA) * self.rttdev
+        return self.srtt + 4 * self.rttdev
 
     # Process an ACK (and ignore any other packet type)
     def receive(self,p,link,time):
@@ -129,8 +144,10 @@ class ReliableReceiverNode(Router):
     # to deliver the DATA packets to the application in exact incrementing
     # sequence order without any duplicates or gaps.
     def reliable_recv(self, sender, time, seqnum, pkt_timestamp):
-        ## Your code here
-        pass
+        assert seqnum >= self.app_seqnum
+        if seqnum > self.app_seqnum:
+            self.app_receive(seqnum, time)
+        self.send_ack(sender, time, seqnum, pkt_timestamp)
 
     # app_receive() should be called by receive() for each data packet that 
     # arrives in order of incrementing sequence number (i.e., without gaps)

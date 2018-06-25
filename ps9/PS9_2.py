@@ -4,6 +4,10 @@
 import random,sys
 from optparse import OptionParser
 from PS9_netsim import *
+from heapq import heappush, heappop
+
+ALPHA = 1.0 / 8.0
+BETA = 0.25
 
 # ReliableSenderNode extends Router to implement a reliable sender
 class ReliableSenderNode(Router):
@@ -21,6 +25,8 @@ class ReliableSenderNode(Router):
         ## Your initialization code here.  We've already initialized
         ## self.srtt, self.rttdev, self.timeout above.  Initialize anything
         ## else you need here
+        self.outgoing_pkts = []
+        self.seqnum = 1
 
     def __repr__(self):
         return 'ReliableSenderNode<%s>' % str(self.address)
@@ -66,14 +72,28 @@ class ReliableSenderNode(Router):
     # 3. The sequence number of a packet p may be retrieved using 
     # p.properties['seqnum'].
     def reliable_send(self, time):
-        ## Your code here
-        pass
+        if self.window > len(self.outgoing_pkts):
+            pkt = self.send_pkt(time, self.seqnum, time, 'black')
+            self.seqnum += 1
+            self.outgoing_pkts.append(pkt)
+        new_outgoing_pkts = []
+        timeout_found = False
+        for pkt in self.outgoing_pkts:
+            if self.timeout + pkt.properties['timestamp'] >= time:
+                new_pkt = self.send_pkt(time, pkt.properties['seqnum'], time, 'grey')
+                new_outgoing_pkts.append(new_pkt)
+                timeout_found = True
+            else:
+                new_outgoing_pkts.append(pkt)
+        if timeout_found:
+            self.timeout *= 2
+        self.outgoing_pkts = new_outgoing_pkts
 
     # An ACK just arrived; process it.  Remember to call calc_timeout with the
     # appropriate information.
     def process_ack(self, time, acknum, pkt_timestamp):
-        ## Your code here
-        pass
+        self.outgoing_pkts = [p for p in self.outgoing_pkts if p.properties['seqnum'] != acknum]
+        self.timeout = self.calc_timeout(time, pkt_timestamp)
 
     # Update RTT statistics and compute the sender's timeout value.  The 
     # current time and the timestamp echoed in the ACK from the receiver 
@@ -81,8 +101,12 @@ class ReliableSenderNode(Router):
     # Copy this function from Task 1 (stop-and-wait protocol) of Lab 10; if
     # that code is correct, it should work unchanged.
     def calc_timeout(self, time, pkt_timestamp):
-        ## Your code here (copy it over from task 1)
-        pass
+        assert time > pkt_timestamp
+        r = time - pkt_timestamp
+        self.srtt = ALPHA * r + (1 - ALPHA) * self.srtt
+        dev = abs(r - self.srtt)
+        self.rttdev = BETA * dev + (1 - BETA) * self.rttdev
+        return self.srtt + 4 * self.rttdev
 
     # Process an ACK (and ignore any other packet type)
     def receive(self,p,link,time):
@@ -112,6 +136,8 @@ class ReliableReceiverNode(Router):
         self.rcv_seqnum = 0
         self.rcvbuf = []
         self.maxrcvbuf = 0
+        self.pending_pkts = []
+        self.rcv_set = set([])
 
     def __repr__(self):
         return 'ReliableReceiverNode<%s>' % str(self.address)
@@ -154,8 +180,13 @@ class ReliableReceiverNode(Router):
     # An error will result either in the receiver "hanging" or in an assertion
     # failure in app_receive().
     def reliable_recv(self, sender, time, seqnum, pkt_timestamp):
-        ## Your code here
-        pass
+        self.send_ack(sender, time, seqnum, pkt_timestamp)
+        if seqnum not in self.rcv_set:
+            heappush(self.pending_pkts, seqnum)
+        self.rcv_set.add(seqnum)
+        while len(self.pending_pkts) > 0 and self.pending_pkts[0] == self.app_seqnum + 1:
+            rcv_seqnum = self.pending_pkts[0]
+            self.app_receive(heappop(self.pending_pkts), time)
 
     # app_receive() should be called by receive() for each data packet that 
     # arrives in order of incrementing sequence number (i.e., without gaps)
